@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fiscal-notes-control.local/contracts/canonical-document.v1.schema.json",
+  "title": "Documento fiscal canônico v1",
+  "description": "JSON normalizado produzido por cada leitor. Campos desconhecidos são null, nunca inventados. Valores monetários e quantidades são strings decimais.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "document", "provenance", "quality"],
+  "properties": {
+    "schema_version": { "const": "1.0" },
+    "document": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["document_type", "model", "access_key", "qr_url", "issuer", "issued_at", "status", "currency", "totals", "items"],
+      "properties": {
+        "document_type": { "enum": ["NF-e", "NFC-e", "other", "unknown", null] },
+        "model": { "type": ["string", "null"], "pattern": "^[0-9]{2}$" },
+        "access_key": { "type": ["string", "null"], "pattern": "^[0-9]+$" },
+        "qr_url": { "type": ["string", "null"] },
+        "issuer": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["name", "tax_id", "state_registration", "address"],
+          "properties": {
+            "name": { "type": ["string", "null"] },
+            "tax_id": { "type": ["string", "null"], "pattern": "^([0-9]{11}|[0-9]{14})$" },
+            "state_registration": { "type": ["string", "null"] },
+            "address": { "type": ["string", "null"] }
+          }
+        },
+        "issued_at": {
+          "type": ["string", "null"],
+          "description": "ISO 8601. Incluir fuso apenas quando conhecido; não inferir."
+        },
+        "status": { "type": ["string", "null"] },
+        "currency": { "type": ["string", "null"], "pattern": "^[A-Z]{3}$" },
+        "totals": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["products", "discount", "other_charges", "invoice", "paid"],
+          "properties": {
+            "products": { "$ref": "#/$defs/decimal" },
+            "discount": { "$ref": "#/$defs/decimal" },
+            "other_charges": { "$ref": "#/$defs/decimal" },
+            "invoice": { "$ref": "#/$defs/decimal" },
+            "paid": { "$ref": "#/$defs/decimal" }
+          }
+        },
+        "items": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/item" }
+        }
+      }
+    },
+    "provenance": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["reader_id", "reader_version", "normalizer_version", "retrieved_at", "source_url"],
+      "properties": {
+        "reader_id": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,62}$" },
+        "reader_version": { "type": "string", "minLength": 1 },
+        "normalizer_version": { "type": "string", "minLength": 1 },
+        "retrieved_at": { "type": "string", "format": "date-time" },
+        "source_url": { "type": ["string", "null"], "description": "URL com segredos redigidos." }
+      }
+    },
+    "quality": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fields_present", "fields_missing", "warnings"],
+      "properties": {
+        "fields_present": { "type": "array", "items": { "type": "string" } },
+        "fields_missing": { "type": "array", "items": { "type": "string" } },
+        "warnings": { "type": "array", "items": { "type": "string" } }
+      }
+    }
+  },
+  "$defs": {
+    "decimal": {
+      "type": ["string", "null"],
+      "pattern": "^-?[0-9]+(\\.[0-9]+)?$",
+      "description": "Decimal como string, para evitar ponto flutuante binário."
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["line_number", "description", "gtin", "sku", "ncm", "cfop", "unit", "quantity", "unit_price", "discount", "total", "brand", "category"],
+      "properties": {
+        "line_number": { "type": "integer", "minimum": 1 },
+        "description": { "type": ["string", "null"] },
+        "gtin": { "type": ["string", "null"], "pattern": "^([0-9]{8}|[0-9]{12}|[0-9]{13}|[0-9]{14})$" },
+        "sku": { "type": ["string", "null"] },
+        "ncm": { "type": ["string", "null"], "pattern": "^[0-9]{8}$" },
+        "cfop": { "type": ["string", "null"], "pattern": "^[0-9]{4}$" },
+        "unit": { "type": ["string", "null"] },
+        "quantity": { "$ref": "#/$defs/decimal" },
+        "unit_price": { "$ref": "#/$defs/decimal" },
+        "discount": { "$ref": "#/$defs/decimal" },
+        "total": { "$ref": "#/$defs/decimal" },
+        "brand": { "type": ["string", "null"] },
+        "category": { "type": ["string", "null"] },
+        "raw": {
+          "type": ["object", "null"],
+          "description": "Texto/valores originais do item, quando o leitor os preservar."
+        }
+      }
+    }
+  }
+}

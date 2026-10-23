@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fiscal-notes-control.local/contracts/reader-result.v1.schema.json",
+  "title": "Resultado de leitor v1",
+  "description": "Mensagem publicada pelo worker na fila fiscal.results. O NestJS é o único que grava no banco; um resultado para tentativa já finalizada é descartado.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "attempt_id", "reader_key", "reader_version", "status", "started_at", "finished_at", "http_status", "error", "raw", "normalized"],
+  "properties": {
+    "contract_version": { "const": "reader-result.v1" },
+    "attempt_id": { "type": "string", "format": "uuid" },
+    "reader_key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,62}$" },
+    "reader_version": { "type": "string", "minLength": 1 },
+    "status": {
+      "enum": ["success", "empty", "not_supported", "not_found", "blocked", "timeout", "invalid_input", "parse_error", "provider_error", "failed"]
+    },
+    "started_at": { "type": ["string", "null"], "format": "date-time" },
+    "finished_at": { "type": "string", "format": "date-time" },
+    "http_status": { "type": ["integer", "null"], "minimum": 100, "maximum": 599 },
+    "error": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["code", "message_redacted", "retryable"],
+      "properties": {
+        "code": { "type": "string", "minLength": 1, "maxLength": 100 },
+        "message_redacted": { "type": ["string", "null"], "maxLength": 2000 },
+        "retryable": { "type": "boolean" }
+      }
+    },
+    "raw": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["content_type", "size_bytes", "sha256", "body_base64"],
+      "properties": {
+        "content_type": { "type": ["string", "null"] },
+        "size_bytes": { "type": "integer", "minimum": 0, "maximum": 10485760 },
+        "sha256": { "type": "string", "pattern": "^[0-9a-f]{64}$" },
+        "body_base64": { "type": "string", "contentEncoding": "base64" }
+      }
+    },
+    "normalized": {
+      "description": "Documento no formato canonical-document.v1, ou null quando não houver.",
+      "anyOf": [
+        { "$ref": "canonical-document.v1.schema.json" },
+        { "type": "null" }
+      ]
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "status": { "const": "success" } } },
+      "then": { "properties": { "normalized": { "type": "object" } } }
+    },
+    {
+      "if": { "properties": { "status": { "enum": ["blocked", "timeout", "invalid_input", "parse_error", "provider_error", "failed"] } } },
+      "then": { "properties": { "error": { "type": "object" } } }
+    }
+  ]
+}

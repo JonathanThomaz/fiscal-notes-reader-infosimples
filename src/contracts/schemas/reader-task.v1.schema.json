@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://fiscal-notes-control.local/contracts/reader-task.v1.schema.json",
+  "title": "Tarefa de leitor v1",
+  "description": "Mensagem publicada pelo NestJS na exchange fiscal.readers, com routing key = reader_registry.queue_name. Entrega pelo menos uma vez: o worker deve tolerar duplicatas (chave: attempt_id).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["contract_version", "attempt_id", "document_id", "run_id", "reader_key", "reader_version", "attempt_number", "input", "deadline", "published_at"],
+  "properties": {
+    "contract_version": { "const": "reader-task.v1" },
+    "attempt_id": { "type": "string", "format": "uuid" },
+    "document_id": { "type": "string", "format": "uuid" },
+    "run_id": { "type": "string", "format": "uuid" },
+    "reader_key": { "type": "string", "pattern": "^[a-z][a-z0-9_]{1,62}$" },
+    "reader_version": { "type": "string", "minLength": 1 },
+    "attempt_number": { "type": "integer", "minimum": 1 },
+    "input": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["qr_content", "access_key", "document_type", "model", "issuer_uf"],
+      "properties": {
+        "qr_content": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 4096,
+          "description": "Conteúdo original do QR Code (descriptografado). Nunca registrar em logs."
+        },
+        "access_key": { "type": ["string", "null"], "pattern": "^[0-9]+$" },
+        "document_type": { "enum": ["unknown", "nfe", "nfce", "other"] },
+        "model": { "type": ["string", "null"], "pattern": "^[0-9]{2}$" },
+        "issuer_uf": { "type": ["string", "null"], "pattern": "^[A-Z]{2}$" }
+      }
+    },
+    "deadline": {
+      "type": "string",
+      "format": "date-time",
+      "description": "Após este instante o worker deve abandonar a tarefa e responder timeout."
+    },
+    "limits": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Limites do leitor (reader_registry). O worker faz as retentativas internamente, com backoff, e publica um único resultado final.",
+      "required": ["timeout_ms", "max_attempts", "backoff_ms"],
+      "properties": {
+        "timeout_ms": { "type": "integer", "minimum": 1 },
+        "max_attempts": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "backoff_ms": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "published_at": { "type": "string", "format": "date-time" }
+  }
+}
