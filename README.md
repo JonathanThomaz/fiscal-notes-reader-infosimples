@@ -12,7 +12,7 @@ yarn install
 yarn dev                # build + start
 ```
 
-A fila é declarada pelo `fiscal-notes-api` na primeira publicação; até lá o worker aguarda. O leitor `infosimples` é registrado pela migração 0003 da API.
+A fila é declarada pelo `fiscal-notes-api` na primeira publicação; até lá o worker aguarda. O leitor `infosimples` é registrado pela migração 0004 da API (desabilitado: um admin habilita, pois cada consulta é cobrada).
 
 ## Custo e latência
 
